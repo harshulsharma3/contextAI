@@ -5,6 +5,8 @@
 ContextAI turns PDFs, transcripts, YouTube lectures, and web pages into a searchable knowledge base. Answers are generated only from your sources, with clickable citations that jump to the exact PDF page or video timestamp.
 
 ---
+VideoLink - https://drive.google.com/drive/folders/1oAn6x8xb0VDGA348HvR--nCm1XAR9xvK?usp=sharing
+---
 
 ## Features
 
