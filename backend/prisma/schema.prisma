@@ -1,0 +1,261 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
+}
+
+enum SourceType {
+  vtt
+  srt
+  youtube
+  pdf
+  text
+  weblink
+  video
+}
+
+enum SourceStatus {
+  pending
+  indexing
+  ready
+  error
+}
+
+enum ChatMode {
+  global
+  individual
+}
+
+enum MessageRole {
+  user
+  assistant
+}
+
+enum QuizStatus {
+  generating
+  ready
+  error
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sources Source[]
+  chats   Chat[]
+  quizzes Quiz[]
+  chunks  Chunk[]
+}
+
+model Source {
+  id              String       @id @default(cuid())
+  projectId       String
+  name            String
+  fileName        String
+  type            SourceType
+  label           String?
+  status          SourceStatus @default(pending)
+  sourceUrl       String?
+  storageKey      String?
+  mimeType        String?
+  textContent     String?      @db.Text
+  durationSeconds Int?
+  pageCount       Int?
+  chunkCount      Int          @default(0)
+  error           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  chunks      Chunk[]
+  chatSources ChatSource[]
+  quizSources QuizSource[]
+  citations   Citation[]
+  questions   Question[]
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model Chunk {
+  id           String                       @id @default(cuid())
+  sourceId     String
+  projectId    String
+  chunkIndex   Int
+  content      String                       @db.Text
+  tokenCount   Int                          @default(0)
+  startMs      Int?
+  endMs        Int?
+  page         Int?
+  locatorLabel String
+  /// pgvector column — written/read via raw SQL
+  embedding    Unsupported("vector(768)")?
+
+  source    Source     @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  citations Citation[]
+  questions Question[]
+
+  @@unique([sourceId, chunkIndex])
+  @@index([projectId])
+  @@index([sourceId])
+}
+
+model Chat {
+  id        String   @id @default(cuid())
+  projectId String
+  title     String
+  mode      ChatMode @default(global)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project  Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messages Message[]
+  sources  ChatSource[]
+
+  @@index([projectId])
+}
+
+model ChatSource {
+  chatId   String
+  sourceId String
+
+  chat   Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@id([chatId, sourceId])
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  chatId         String
+  role           MessageRole
+  content        String      @db.Text
+  title          String?
+  score          Float?
+  diagramWorthy  Boolean     @default(false)
+  diagramKey     String?
+  createdAt      DateTime    @default(now())
+
+  chat      Chat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  citations Citation[]
+
+  @@index([chatId])
+}
+
+model Citation {
+  id           String  @id @default(cuid())
+  messageId    String
+  sourceId     String
+  chunkId      String?
+  sourceLabel  String
+  locatorLabel String
+  startMs      Int?
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  source  Source  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  chunk   Chunk?  @relation(fields: [chunkId], references: [id], onDelete: SetNull)
+
+  @@index([messageId])
+}
+
+model Quiz {
+  id         String     @id @default(cuid())
+  projectId  String
+  focus      String
+  cardCount  Int
+  status     QuizStatus @default(generating)
+  progress   Int        @default(0)
+  progressMsg String?
+  error      String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sources   QuizSource[]
+  questions Question[]
+  sessions  QuizSession[]
+
+  @@index([projectId])
+}
+
+model QuizSource {
+  quizId   String
+  sourceId String
+
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@id([quizId, sourceId])
+}
+
+model Question {
+  id              String @id @default(cuid())
+  quizId          String
+  number          Int
+  prompt          String @db.Text
+  correctOptionId String
+  explanation     String @db.Text
+  reference       String
+  sourceId        String?
+  chunkId         String?
+
+  quiz     Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  source   Source?  @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  chunk    Chunk?   @relation(fields: [chunkId], references: [id], onDelete: SetNull)
+  options  Option[]
+  answers  Answer[]
+
+  @@unique([quizId, number])
+  @@index([quizId])
+}
+
+model Option {
+  id         String @id @default(cuid())
+  questionId String
+  label      String
+  text       String @db.Text
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers  Answer[]
+
+  @@index([questionId])
+}
+
+model QuizSession {
+  id          String    @id @default(cuid())
+  quizId      String
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  score       Float?
+
+  quiz    Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  answers Answer[]
+
+  @@index([quizId])
+}
+
+model Answer {
+  id               String    @id @default(cuid())
+  sessionId        String
+  questionId       String
+  selectedOptionId String?
+  confidence       Int?
+  isCorrect        Boolean?
+  answeredAt       DateTime?
+
+  session        QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question       Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption Option?     @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([sessionId, questionId])
+  @@index([sessionId])
+}

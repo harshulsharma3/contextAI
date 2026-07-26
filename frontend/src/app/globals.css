@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+:root {
+  --cream: #fdfbf7;
+  --cream-muted: #f5f2ed;
+  --sidebar: #2d2823;
+  --sidebar-hover: #3a342e;
+  --sidebar-active: #45403a;
+  --ink: #1a1714;
+  --ink-muted: #6b6560;
+  --terracotta: #b27054;
+  --terracotta-hover: #9e5f45;
+  --teal: #1e4d4d;
+  --teal-hover: #163a3a;
+  --border: #e8e2d9;
+  --white: #ffffff;
+}
+
+@theme inline {
+  --color-cream: var(--cream);
+  --color-cream-muted: var(--cream-muted);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-terracotta: var(--terracotta);
+  --color-terracotta-hover: var(--terracotta-hover);
+  --color-teal: var(--teal);
+  --color-teal-hover: var(--teal-hover);
+  --color-border: var(--border);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-sans), ui-sans-serif, sans-serif;
+}
+
+/* Subtle scrollbar for panels */
+.panel-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.panel-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.panel-scroll::-webkit-scrollbar-thumb {
+  background: #d4cdc3;
+  border-radius: 999px;
+}
+.panel-scroll::-webkit-scrollbar-thumb:hover {
+  background: #b8b0a4;
+}
